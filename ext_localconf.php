@@ -1,5 +1,5 @@
 <?php
-defined('TYPO3_MODE') or die();
+defined('TYPO3') || die();
 
 (function () {
     $GLOBALS['TYPO3_CONF_VARS']['FE']['ContentObjects']['TYPOSCRIPT_RENDERING'] = \Helhum\TyposcriptRendering\ContentObject\TypoScriptRenderingContentObject::class;
