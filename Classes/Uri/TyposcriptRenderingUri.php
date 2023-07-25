@@ -18,7 +18,10 @@ use Helhum\TyposcriptRendering\Configuration\ConfigurationBuildingException;
 use Helhum\TyposcriptRendering\Configuration\RecordRenderingConfigurationBuilder;
 use Helhum\TyposcriptRendering\Renderer\RenderingContext;
 use TYPO3\CMS\Core\Http\Uri;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
+use TYPO3\CMS\Extbase\Mvc\RequestInterface;
+use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3\CMS\Fluid\Core\Widget\WidgetRequest;
 
 class TyposcriptRenderingUri extends Uri
@@ -49,8 +52,9 @@ class TyposcriptRenderingUri extends Uri
     private function parseViewHelperContext(ViewHelperContext $viewHelperContext): void
     {
         $arguments = $viewHelperContext->getArguments();
-        $controllerContext = $viewHelperContext->getControllerContext();
-        $request = $controllerContext->getRequest();
+
+        /** @var RequestInterface $request */
+        $request = $viewHelperContext->getRequest();
 
         $pluginName = $arguments['pluginName'] ?? null;
         $extensionName = $arguments['extensionName'] ?? null;
@@ -58,17 +62,17 @@ class TyposcriptRenderingUri extends Uri
         $additionalParams = $arguments['additionalParams'];
         $renderingPath = $arguments['typoscriptObjectPath'] ?? null;
 
-        if ($pluginName === null) {
+        if ($pluginName === null && $request->getAttribute('extbase')) {
             $pluginName = $request->getPluginName();
         }
-        if ($extensionName === null) {
+        if ($extensionName === null && $request->getAttribute('extbase')) {
             $extensionName = $request->getControllerExtensionName();
         }
         if ($contextRecord === 'current') {
-            if (
+            if ($request->getAttribute('extbase') && (
                 $pluginName !== $request->getPluginName()
                 || $extensionName !== $request->getControllerExtensionName()
-            ) {
+                )) {
                 $contextRecord = 'currentPage';
             } else {
                 $contextRecord = $viewHelperContext->getContentObject()->currentRecord;
@@ -81,8 +85,11 @@ class TyposcriptRenderingUri extends Uri
         }
         $additionalParams['tx_typoscriptrendering']['context'] = json_encode($renderingConfiguration);
 
-        $uriBuilder = $controllerContext->getUriBuilder();
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+
         $uriBuilder->reset();
+        $uriBuilder->setRequest($request);
+
         if (is_callable([$uriBuilder, 'setUseCacheHash'])) {
             $uriBuilder->setUseCacheHash(true);
         }
@@ -93,7 +100,6 @@ class TyposcriptRenderingUri extends Uri
             ->setArguments($additionalParams)
             ->setCreateAbsoluteUri($arguments['absolute'] ?? false)
             ->setAddQueryString($arguments['addQueryString'] ?? false)
-            ->setAddQueryStringMethod('GET')
             ->setArgumentsToBeExcludedFromQueryString($arguments['argumentsToBeExcludedFromQueryString'] ?? []);
         if (MathUtility::canBeInterpretedAsInteger($arguments['pageUid'])) {
             $uriBuilder->setTargetPageUid((int)$arguments['pageUid']);
@@ -158,6 +164,7 @@ class TyposcriptRenderingUri extends Uri
 
         $uriBuilder = $controllerContext->getUriBuilder();
         $uriBuilder->reset()
+            ->setRequest($request)
             ->setUseCacheHash(true)
             ->setSection($arguments['section'] ?? '')
             ->setFormat($arguments['format'] ?? 'html')
@@ -202,11 +209,11 @@ class TyposcriptRenderingUri extends Uri
         return $configurationBuilder->configurationForPath($renderingPath, $contextRecordId);
     }
 
-    protected function parseUri($uri, $removeControllerArgument = false)
-    {
-        if ($removeControllerArgument) {
-            $uri = str_replace('&tx__%5Bcontroller%5D=Standard', '', $uri);
-        }
-        parent::parseUri($uri);
-    }
+//    protected function parseUri($uri, $removeControllerArgument = false)
+//    {
+//        if ($removeControllerArgument) {
+//            $uri = str_replace('&tx__%5Bcontroller%5D=Standard', '', $uri);
+//        }
+//        parent::parseUri($uri);
+//    }
 }

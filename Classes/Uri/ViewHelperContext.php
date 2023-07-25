@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+
 namespace Helhum\TyposcriptRendering\Uri;
 
 /*
@@ -14,6 +15,8 @@ namespace Helhum\TyposcriptRendering\Uri;
  *
  */
 
+use Helhum\TyposcriptRendering\Mvc\Request;
+use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Mvc\Controller\ControllerContext;
@@ -45,14 +48,13 @@ class ViewHelperContext
         $this->configurationManager = $configurationManager;
     }
 
-    public function getControllerContext(): ControllerContext
+    public function getRequest(): ServerRequestInterface
     {
         if ($this->renderingContext instanceof \TYPO3\CMS\Fluid\Core\Rendering\RenderingContext) {
-            return $this->renderingContext->getControllerContext();
+            return $this->renderingContext->getRequest();
         }
 
-        // Let PHP deal with the error, we don't operate in other contexts anyway
-        return null;
+        return $GLOBALS['TYPO3_REQUEST'];
     }
 
     public function getArguments(): array
@@ -62,9 +64,11 @@ class ViewHelperContext
 
     public function getContentObject(): ContentObjectRenderer
     {
-        $configurationManager = $this->configurationManager ?? GeneralUtility::makeInstance(ObjectManager::class)->get(ConfigurationManager::class);
-        $contentObject = $configurationManager->getContentObject();
+        return GeneralUtility::makeInstance(ContentObjectRenderer::class);
+    }
 
-        return $contentObject ?? GeneralUtility::makeInstance(ContentObjectRenderer::class);
+    public function getRenderingContext(): RenderingContextInterface
+    {
+        return $this->renderingContext;
     }
 }
